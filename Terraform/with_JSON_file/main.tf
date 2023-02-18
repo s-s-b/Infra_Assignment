@@ -22,7 +22,7 @@ resource "kubernetes_namespace" "test" {
 }
 
 resource "kubernetes_deployment" "app_deploy" {
-  for_each = local.app
+  for_each = {for index, conf in local.app: conf.name => conf}
   metadata {
     name      = each.value.name
     namespace = kubernetes_namespace.test.metadata.0.name
@@ -42,7 +42,7 @@ resource "kubernetes_deployment" "app_deploy" {
       }
       spec {
         container {
-          image = each.value.image
+          image = "docker.io/${each.value.image}:latest"
           args  = [each.value.args]
           name  = each.value.name
         }
@@ -52,14 +52,14 @@ resource "kubernetes_deployment" "app_deploy" {
 }
 
 resource "kubernetes_service" "service" {
-  for_each = local.app
+  for_each = {for index, conf in local.app: conf.name => conf}
   metadata {
     name      = "${each.value.name}-service"
     namespace = kubernetes_namespace.test.metadata.0.name
   }
   spec {
     selector = {
-      app = each.value.name
+      app = kubernetes_deployment.app_deploy[each.key].spec.0.template.0.metadata.0.labels.app
     }
     type = "NodePort"
     port {
@@ -80,7 +80,7 @@ resource "kubernetes_ingress_v1" "my_ingress" {
     rule {
       http {
         dynamic "path" {
-          for_each = local.app
+          for_each = {for index, conf in local.app: conf.name => conf}
           content {
             backend {
               service {
