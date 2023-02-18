@@ -38,7 +38,7 @@ resource "kubernetes_deployment" "blue-app" {
       spec {
         container {
           image = "docker.io/hashicorp/http-echo:0.2.3"
-          args = ["-listen=:8080", "-text='I am blue'"]
+          args  = ["-listen=:8080", "-text='I am blue'"]
           name  = "blue-app"
         }
       }
@@ -84,7 +84,7 @@ resource "kubernetes_deployment" "green-app" {
       spec {
         container {
           image = "docker.io/hashicorp/http-echo:0.2.3"
-          args = ["-listen=:8081", "-text='I am green'"]
+          args  = ["-listen=:8081", "-text='I am green'"]
           name  = "green-app"
         }
       }
@@ -103,7 +103,7 @@ resource "kubernetes_service" "green-service" {
     }
     type = "NodePort"
     port {
-      port        = 8081
+      port        = 8080
       target_port = 8081
     }
   }
@@ -112,13 +112,14 @@ resource "kubernetes_service" "green-service" {
 resource "kubernetes_ingress_v1" "my_ingress" {
   metadata {
     name = "my-ingress"
+    namespace = kubernetes_namespace.test.metadata.0.name
   }
 
   spec {
     ingress_class_name = "nginx"
     default_backend {
       service {
-        name = "blue-app"
+        name = "blue-service"
         port {
           number = 8080
         }
@@ -130,27 +131,27 @@ resource "kubernetes_ingress_v1" "my_ingress" {
         path {
           backend {
             service {
-              name = "blue-app"
+              name = "blue-service"
               port {
                 number = 8080
               }
             }
           }
 
-          path = "/app1/*"
+          path = "/blue/*"
         }
 
         path {
           backend {
             service {
-              name = "green-app"
+              name = "green-service"
               port {
-                number = 8081
+                number = 8080
               }
             }
           }
 
-          path = "/app2/*"
+          path = "/green/*"
         }
       }
     }
